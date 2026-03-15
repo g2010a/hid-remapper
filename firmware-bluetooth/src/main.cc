@@ -608,6 +608,7 @@ static void pairing_failed(struct bt_conn* conn, enum bt_security_err reason) {
 
 static struct bt_conn_auth_cb conn_auth_callbacks = {
     .cancel = auth_cancel,
+    .capability = BT_IO_CAPABILITY_IN_NONE,
 };
 
 static struct bt_conn_auth_info_cb conn_auth_info_callbacks = {
