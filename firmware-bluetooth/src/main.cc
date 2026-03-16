@@ -458,7 +458,7 @@ static void connected(struct bt_conn* conn, uint8_t conn_err) {
         LOG_WRN("bt_scan_stop returned %d after connect", scan_err);
     }
 
-    CHK(bt_conn_set_security(conn, (bt_security_t) (BT_SECURITY_L2 | BT_SECURITY_FORCE_PAIR)));
+    CHK(bt_conn_set_security(conn, BT_SECURITY_L2));
 }
 
 static void disconnected(struct bt_conn* conn, uint8_t reason) {
@@ -637,6 +637,12 @@ static const struct bt_hogp_init_params hogp_init_params = {
     .prep_error_cb = hogp_prep_error_cb,
 };
 
+static void auth_passkey_display(struct bt_conn* conn, unsigned int passkey) {
+    char addr[BT_ADDR_LE_STR_LEN];
+    bt_addr_le_to_str(bt_conn_get_dst(conn), addr, sizeof(addr));
+    LOG_INF("passkey_display: %s passkey=%06u", addr, passkey);
+}
+
 static void auth_cancel(struct bt_conn* conn) {
     char addr[BT_ADDR_LE_STR_LEN];
     bt_addr_le_to_str(bt_conn_get_dst(conn), addr, sizeof(addr));
@@ -663,6 +669,7 @@ static void pairing_failed(struct bt_conn* conn, enum bt_security_err reason) {
 }
 
 static struct bt_conn_auth_cb conn_auth_callbacks = {
+    .passkey_display = auth_passkey_display,
     .cancel = auth_cancel,
     .pairing_confirm = auth_pairing_confirm,
 };
