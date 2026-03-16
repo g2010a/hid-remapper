@@ -278,12 +278,13 @@ static K_WORK_DEFINE(clear_bonds_work, clear_bonds_work_fn);
 static void scan_filter_match(struct bt_scan_device_info* device_info, struct bt_scan_filter_match* filter_match, bool connectable) {
     char addr[BT_ADDR_LE_STR_LEN];
 
+    bt_addr_le_to_str(device_info->recv_info->addr, addr, sizeof(addr));
+    LOG_INF("scan_filter_match: %s uuid.match=%d uuid.count=%u", addr, filter_match->uuid.match, filter_match->uuid.count);
+
     if (!filter_match->uuid.match || (filter_match->uuid.count != 1)) {
         LOG_WRN("%s invalid device connected", __func__);
         return;
     }
-
-    bt_addr_le_to_str(device_info->recv_info->addr, addr, sizeof(addr));
 
     LOG_INF("%s address: %s connectable: %s", __func__, addr, connectable ? "yes" : "no");
 }
@@ -301,8 +302,10 @@ static void scan_filter_no_match(struct bt_scan_device_info* device_info, bool c
     struct bt_conn* conn;
     char addr[BT_ADDR_LE_STR_LEN];
 
+    bt_addr_le_to_str(device_info->recv_info->addr, addr, sizeof(addr));
+    LOG_INF("scan_filter_no_match: %s connectable: %s adv_type: %u", addr, connectable ? "yes" : "no", device_info->recv_info->adv_type);
+
     if (device_info->recv_info->adv_type == BT_GAP_ADV_TYPE_ADV_DIRECT_IND) {
-        bt_addr_le_to_str(device_info->recv_info->addr, addr, sizeof(addr));
         LOG_INF("Direct advertising received from %s", addr);
         scan_stop();  // XXX
 
