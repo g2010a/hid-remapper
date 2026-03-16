@@ -301,11 +301,15 @@ static void scan_filter_match(struct bt_scan_device_info* device_info, struct bt
 }
 
 static void scan_connecting_error(struct bt_scan_device_info* device_info) {
-    LOG_WRN("");
+    char addr[BT_ADDR_LE_STR_LEN];
+    bt_addr_le_to_str(device_info->recv_info->addr, addr, sizeof(addr));
+    LOG_ERR("scan_connecting_error: %s", addr);
 }
 
 static void scan_connecting(struct bt_scan_device_info* device_info, struct bt_conn* conn) {
-    LOG_INF("");
+    char addr[BT_ADDR_LE_STR_LEN];
+    bt_addr_le_to_str(device_info->recv_info->addr, addr, sizeof(addr));
+    LOG_INF("scan_connecting: %s conn=%p", addr, (void*)conn);
 }
 
 // XXX this hasn't been tested in practice
@@ -408,6 +412,8 @@ static void button_cb(const struct device* dev, struct gpio_callback* cb, uint32
 static void connected(struct bt_conn* conn, uint8_t conn_err) {
     char addr[BT_ADDR_LE_STR_LEN];
 
+    LOG_INF("connected callback: conn=%p conn_err=%u", (void*)conn, conn_err);
+
     scanning = false;
     count_connections();
     set_led_mode(LedMode::BLINK);
@@ -421,7 +427,7 @@ static void connected(struct bt_conn* conn, uint8_t conn_err) {
         return;
     }
 
-    LOG_INF("%s", addr);
+    LOG_INF("Connected to %s", addr);
 
     CHK(bt_conn_set_security(conn, BT_SECURITY_L2));
 }
