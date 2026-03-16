@@ -1,5 +1,6 @@
 #include <errno.h>
 #include <stddef.h>
+#include <string.h>
 
 #include <bluetooth/gatt_dm.h>
 #include <bluetooth/scan.h>
@@ -33,6 +34,7 @@ LOG_MODULE_REGISTER(remapper, LOG_LEVEL_DBG);
 
 static const int SCAN_DELAY_MS = 1000;
 static const int CLEAR_BONDS_BUTTON_PRESS_MS = 3000;
+static const char* const SLIMBLADE_ADDR = "F7:19:44:2D:BA:EB";
 
 // these macros don't work in C++ when used directly ("taking address of temporary array")
 static auto const BT_UUID_HIDS_ = (struct bt_uuid_16) BT_UUID_INIT_16(BT_UUID_HIDS_VAL);
@@ -312,13 +314,19 @@ static void scan_connecting(struct bt_scan_device_info* device_info, struct bt_c
     LOG_INF("scan_connecting: %s conn=%p", addr, (void*)conn);
 }
 
+static bool is_slimblade_addr(const char* addr) {
+    return strstr(addr, SLIMBLADE_ADDR) != NULL;
+}
+
 // XXX this hasn't been tested in practice
 static void scan_filter_no_match(struct bt_scan_device_info* device_info, bool connectable) {
     struct bt_conn* conn;
     char addr[BT_ADDR_LE_STR_LEN];
 
     bt_addr_le_to_str(device_info->recv_info->addr, addr, sizeof(addr));
-    LOG_INF("scan_filter_no_match: %s connectable: %s adv_type: %u", addr, connectable ? "yes" : "no", device_info->recv_info->adv_type);
+    if (is_slimblade_addr(addr)) {
+        LOG_INF("scan_filter_no_match: %s connectable: %s adv_type: %u", addr, connectable ? "yes" : "no", device_info->recv_info->adv_type);
+    }
 
     if (device_info->recv_info->adv_type == BT_GAP_ADV_TYPE_ADV_DIRECT_IND) {
         LOG_INF("Direct advertising received from %s", addr);
@@ -428,6 +436,11 @@ static void connected(struct bt_conn* conn, uint8_t conn_err) {
     }
 
     LOG_INF("Connected to %s", addr);
+
+    int scan_err = bt_scan_stop();
+    if (scan_err && (scan_err != -EALREADY)) {
+        LOG_WRN("bt_scan_stop returned %d after connect", scan_err);
+    }
 
     CHK(bt_conn_set_security(conn, BT_SECURITY_L2));
 }
