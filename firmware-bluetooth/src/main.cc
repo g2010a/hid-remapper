@@ -173,9 +173,12 @@ static void set_led_mode(LedMode led_mode_) {
 }
 
 static void scan_start() {
+    LOG_INF("scan_start: calling bt_scan_start");
     if (CHK(bt_scan_start(BT_SCAN_TYPE_SCAN_PASSIVE))) {
-        LOG_DBG("Scanning started.");
+        LOG_INF("Scanning started successfully");
         scanning = true;
+    } else {
+        LOG_ERR("bt_scan_start failed");
     }
 }
 
@@ -207,6 +210,7 @@ static int count_connections() {
 }
 
 static bool scan_setup_filters() {
+    LOG_INF("scan_setup_filters: peers_only=%d", peers_only);
     bt_scan_filter_remove_all();
 
     if (!CHK(bt_scan_filter_add(BT_SCAN_FILTER_TYPE_UUID, (struct bt_uuid*) &BT_UUID_HIDS_))) {
@@ -220,15 +224,17 @@ static bool scan_setup_filters() {
 
     uint8_t filter_mode = BT_SCAN_UUID_FILTER;
 
+    LOG_INF("scan_setup_filters: bonded_count=%d conn_count=%d filter_mode=0x%02x", bonded_count, conn_count, filter_mode);
+
     if (peers_only && (bonded_count > 0)) {
         if (conn_count == bonded_count) {
-            LOG_DBG("all bonded peers connected, not scanning");
+            LOG_INF("all bonded peers connected, not scanning");
             return false;
         }
         filter_mode |= BT_SCAN_ADDR_FILTER;
-        LOG_DBG("scanning for bonded peers only");
+        LOG_INF("scanning for bonded peers only");
     } else {
-        LOG_DBG("scanning for new peers");
+        LOG_INF("scanning for new peers");
         peers_only = false;
     }
 
@@ -236,18 +242,23 @@ static bool scan_setup_filters() {
         return false;
     }
 
+    LOG_INF("scan_setup_filters: filter enabled");
+
     return true;
 }
 
 static void scan_start_work_fn(struct k_work* work) {
+    LOG_INF("scan_start_work_fn: scanning=%d", scanning);
     if (scanning) {
         scan_stop();
     }
     if (scan_setup_filters()) {
         scan_start();
         set_led_mode(peers_only ? LedMode::BLINK : LedMode::ON);
+        LOG_INF("scan started, peers_only=%d", peers_only);
     } else {
         set_led_mode(LedMode::BLINK);
+        LOG_INF("scan_setup_filters returned false");
     }
 }
 static K_WORK_DELAYABLE_DEFINE(scan_start_work, scan_start_work_fn);
