@@ -47,6 +47,7 @@ static const char* security_err_to_str(int err) {
         case 6: return "PAIR_NOT_ALLOWED";
         case 7: return "INVALID_PARAM";
         case 8: return "KEY_REJECTED";
+        case 9: return "UNSPECIFIED";
         default: return "UNKNOWN";
     }
 }
@@ -639,7 +640,14 @@ static const struct bt_hogp_init_params hogp_init_params = {
 static void auth_cancel(struct bt_conn* conn) {
     char addr[BT_ADDR_LE_STR_LEN];
     bt_addr_le_to_str(bt_conn_get_dst(conn), addr, sizeof(addr));
-    LOG_WRN("%s", addr);
+    LOG_WRN("auth_cancel: %s", addr);
+}
+
+static enum bt_security_err auth_pairing_accept(struct bt_conn* conn, const struct bt_conn_pairing_feat* const feat) {
+    char addr[BT_ADDR_LE_STR_LEN];
+    bt_addr_le_to_str(bt_conn_get_dst(conn), addr, sizeof(addr));
+    LOG_INF("auth_pairing_accept: %s", addr);
+    return BT_SECURITY_ERR_SUCCESS;
 }
 
 static void auth_pairing_confirm(struct bt_conn* conn) {
@@ -658,11 +666,12 @@ static void pairing_complete(struct bt_conn* conn, bool bonded) {
 static void pairing_failed(struct bt_conn* conn, enum bt_security_err reason) {
     char addr[BT_ADDR_LE_STR_LEN];
     bt_addr_le_to_str(bt_conn_get_dst(conn), addr, sizeof(addr));
-    LOG_ERR("pairing_failed: %s, reason %d", addr, reason);
+    LOG_ERR("pairing_failed: %s, reason %d (%s)", addr, reason, security_err_to_str((int)reason));
 }
 
 static struct bt_conn_auth_cb conn_auth_callbacks = {
     .cancel = auth_cancel,
+    .pairing_accept = auth_pairing_accept,
     .pairing_confirm = auth_pairing_confirm,
 };
 
