@@ -36,6 +36,21 @@ static const int SCAN_DELAY_MS = 1000;
 static const int CLEAR_BONDS_BUTTON_PRESS_MS = 3000;
 static const char* const SLIMBLADE_ADDR = "F7:19:44:2D:BA:EB";
 
+static const char* security_err_to_str(int err) {
+    switch (err) {
+        case 0: return "SUCCESS";
+        case 1: return "AUTH_FAIL";
+        case 2: return "PIN_OR_KEY_MISSING";
+        case 3: return "OOB_NOT_AVAILABLE";
+        case 4: return "AUTH_REQUIREMENT";
+        case 5: return "PAIR_NOT_SUPPORTED";
+        case 6: return "PAIR_NOT_ALLOWED";
+        case 7: return "INVALID_PARAM";
+        case 8: return "KEY_REJECTED";
+        default: return "UNKNOWN";
+    }
+}
+
 // these macros don't work in C++ when used directly ("taking address of temporary array")
 static auto const BT_UUID_HIDS_ = (struct bt_uuid_16) BT_UUID_INIT_16(BT_UUID_HIDS_VAL);
 static auto BT_ADDR_LE_ANY_ = BT_ADDR_LE_ANY[0];
@@ -442,7 +457,7 @@ static void connected(struct bt_conn* conn, uint8_t conn_err) {
         LOG_WRN("bt_scan_stop returned %d after connect", scan_err);
     }
 
-    CHK(bt_conn_set_security(conn, BT_SECURITY_L2));
+    CHK(bt_conn_set_security(conn, (bt_security_t) (BT_SECURITY_L2 | BT_SECURITY_FORCE_PAIR)));
 }
 
 static void disconnected(struct bt_conn* conn, uint8_t reason) {
@@ -476,7 +491,7 @@ static void security_changed(struct bt_conn* conn, bt_security_t level, enum bt_
         peers_only = true;
         gatt_discover(conn);
     } else {
-        LOG_ERR("security failed: %s, level=%u, err=%d", addr, level, err);
+        LOG_ERR("security failed: %s, level=%u, err=%d (%s)", addr, level, err, security_err_to_str(err));
     }
 }
 
