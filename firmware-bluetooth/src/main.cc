@@ -608,20 +608,28 @@ static void auth_cancel(struct bt_conn* conn) {
     LOG_WRN("%s", addr);
 }
 
+static void auth_pairing_confirm(struct bt_conn* conn) {
+    char addr[BT_ADDR_LE_STR_LEN];
+    bt_addr_le_to_str(bt_conn_get_dst(conn), addr, sizeof(addr));
+    LOG_INF("pairing_confirm: %s", addr);
+    bt_conn_auth_pairing_confirm(conn);
+}
+
 static void pairing_complete(struct bt_conn* conn, bool bonded) {
     char addr[BT_ADDR_LE_STR_LEN];
     bt_addr_le_to_str(bt_conn_get_dst(conn), addr, sizeof(addr));
-    LOG_INF("%s, bonded=%d", addr, bonded);
+    LOG_INF("pairing_complete: %s, bonded=%d", addr, bonded);
 }
 
 static void pairing_failed(struct bt_conn* conn, enum bt_security_err reason) {
     char addr[BT_ADDR_LE_STR_LEN];
     bt_addr_le_to_str(bt_conn_get_dst(conn), addr, sizeof(addr));
-    LOG_ERR("%s, reason %d", addr, reason);
+    LOG_ERR("pairing_failed: %s, reason %d", addr, reason);
 }
 
 static struct bt_conn_auth_cb conn_auth_callbacks = {
     .cancel = auth_cancel,
+    .pairing_confirm = auth_pairing_confirm,
 };
 
 static struct bt_conn_auth_info_cb conn_auth_info_callbacks = {
