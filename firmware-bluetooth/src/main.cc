@@ -409,7 +409,9 @@ static void connected(struct bt_conn* conn, uint8_t conn_err) {
 
     LOG_INF("%s", addr);
 
-    CHK(bt_conn_set_security(conn, BT_SECURITY_L2));
+    // Use L1 security (encryption without MITM) for Just Works pairing
+    // L2 requires authentication which fails with Kensington Slimblade Pro
+    CHK(bt_conn_set_security(conn, BT_SECURITY_L1));
 }
 
 static void disconnected(struct bt_conn* conn, uint8_t reason) {
