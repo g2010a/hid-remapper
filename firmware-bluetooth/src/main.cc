@@ -73,6 +73,10 @@ struct disconnected_type {
     uint8_t conn_idx;
 };
 
+struct security_setup_type {
+    uint8_t conn_idx;
+};
+
 struct set_report_type {
     uint8_t report_id;
     uint8_t interface;
@@ -84,6 +88,7 @@ K_MSGQ_DEFINE(report_q, sizeof(struct report_type), 16, 4);
 K_MSGQ_DEFINE(descriptor_q, sizeof(struct descriptor_type), 2, 4);
 K_MSGQ_DEFINE(hogp_ready_q, sizeof(struct hogp_ready_type), CONFIG_BT_MAX_CONN, 4);
 K_MSGQ_DEFINE(disconnected_q, sizeof(struct disconnected_type), CONFIG_BT_MAX_CONN, 4);
+K_MSGQ_DEFINE(security_setup_q, sizeof(struct security_setup_type), CONFIG_BT_MAX_CONN, 4);
 K_MSGQ_DEFINE(set_report_q, sizeof(struct set_report_type), 8, 4);
 ATOMIC_DEFINE(tick_pending, 1);
 
@@ -258,6 +263,19 @@ static void scan_stop_work_fn(struct k_work* work) {
 }
 static K_WORK_DEFINE(scan_stop_work, scan_stop_work_fn);
 
+static void security_setup_work_fn(struct k_work* work) {
+    struct security_setup_type item;
+    while (!k_msgq_get(&security_setup_q, &item, K_NO_WAIT)) {
+        struct bt_conn* conn = bt_conn_lookup_id(item.conn_idx);
+        if (conn) {
+            LOG_INF("Setting up security for conn_idx=%d", item.conn_idx);
+            CHK(bt_conn_set_security(conn, BT_SECURITY_L2));
+            bt_conn_unref(conn);
+        }
+    }
+}
+static K_WORK_DELAYABLE_DEFINE(security_setup_work, security_setup_work_fn);
+
 static void disconnect_conn(struct bt_conn* conn, void* data) {
     CHK(bt_conn_disconnect(conn, BT_HCI_ERR_REMOTE_USER_TERM_CONN));
 }
@@ -409,8 +427,10 @@ static void connected(struct bt_conn* conn, uint8_t conn_err) {
 
     LOG_INF("%s", addr);
 
-    LOG_INF("Starting GATT discovery without security");
-    gatt_discover(conn);
+    uint8_t conn_idx = bt_conn_index(conn);
+    struct security_setup_type security_item = { .conn_idx = conn_idx };
+    CHK(k_msgq_put(&security_setup_q, &security_item, K_NO_WAIT));
+    k_work_reschedule(&security_setup_work, K_MSEC(200));
 }
 
 static void disconnected(struct bt_conn* conn, uint8_t reason) {
